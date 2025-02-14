@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { FiGithub } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { FiMoon, FiSun } from 'react-icons/fi';
+import { signIn } from 'next-auth/react';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -42,6 +43,22 @@ export default function AuthPage() {
     clearFormFields();
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      await signIn('google', { callbackUrl: '/user/calendar' });
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+    }
+  };
+
+  const handleGithubSignIn = async () => {
+    try {
+      await signIn('github', { callbackUrl: '/user/calendar' });
+    } catch (error) {
+      console.error('Error signing in with Github:', error);
+    }
+  };
+
   return (
     <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
       <button
@@ -63,17 +80,23 @@ export default function AuthPage() {
           }`}>
             <h2 className="text-2xl font-bold mb-6">Login</h2>
             <div className="flex gap-4 mb-6">
-              <button className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-full ${
-                darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
-              }`}>
+              <button 
+                onClick={handleGoogleSignIn}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-full ${
+                  darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
                 <div className="w-8 h-8 flex items-center justify-center bg-white rounded-full">
                   <FcGoogle size={20} />
                 </div>
                 <span>Google</span>
               </button>
-              <button className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-full ${
-                darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
-              }`}>
+              <button 
+                onClick={handleGithubSignIn}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-full ${
+                  darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
                 <div className={`w-8 h-8 flex items-center justify-center rounded-full ${
                   darkMode ? 'bg-gray-800' : 'bg-white'
                 }`}>
@@ -129,17 +152,23 @@ export default function AuthPage() {
           }`}>
             <h2 className="text-2xl font-bold mb-6">Sign Up</h2>
             <div className="flex gap-4 mb-6">
-              <button className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-full ${
-                darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
-              }`}>
+              <button 
+                onClick={handleGoogleSignIn}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-full ${
+                  darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
                 <div className="w-8 h-8 flex items-center justify-center bg-white rounded-full">
                   <FcGoogle size={20} />
                 </div>
                 <span>Google</span>
               </button>
-              <button className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-full ${
-                darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
-              }`}>
+              <button 
+                onClick={handleGithubSignIn}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-full ${
+                  darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
                 <div className={`w-8 h-8 flex items-center justify-center rounded-full ${
                   darkMode ? 'bg-gray-800' : 'bg-white'
                 }`}>
