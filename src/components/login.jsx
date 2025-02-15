@@ -4,13 +4,11 @@ import { FiGithub } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { FiMoon, FiSun } from 'react-icons/fi';
 import { signIn } from 'next-auth/react';
-import { useSearchParams } from 'next/navigation';
 import ErrorPopup from './ErrorPopup';
 import { useRouter } from 'next/navigation';
 
-export default function AuthPage() {
+export default function AuthPage({ searchParams }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLogin, setIsLogin] = useState(true);

@@ -1,5 +1,10 @@
-import Login from '../components/login';
+import { Suspense } from 'react';
+import LoginWrapper from '../components/LoginWrapper';
 
 export default function Home() {
-  return <Login />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginWrapper />
+    </Suspense>
+  );
 }
