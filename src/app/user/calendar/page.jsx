@@ -1,4 +1,4 @@
-import CalendarTaskManager from "../../../components/calender";
+import CalendarTaskManager from "../../../components/calendar/calender";
 
 const CalendarPage = () => {
   return (
