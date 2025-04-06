@@ -1,11 +1,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, parseISO, isPast, addMonths, subMonths } from "date-fns";
-import { FiX, FiMoon, FiSun, FiPlus, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiX, FiPlus, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import TaskList from './TaskList';
+import { useTheme } from "../../context/ThemeContext";
 
 const CalendarTaskManager = () => {
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode } = useTheme();
+  
   const [currentDate, setCurrentDate] = useState(new Date());
   const [tasks, setTasks] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -17,20 +19,6 @@ const CalendarTaskManager = () => {
     status: "upcoming"
   });
   const [selectedDate, setSelectedDate] = useState(new Date());
-
-  useEffect(() => {
-    const isDark = localStorage.getItem("darkMode") === "true";
-    setDarkMode(isDark);
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
-
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle("dark");
-    localStorage.setItem("darkMode", (!darkMode).toString());
-  };
 
   useEffect(() => {
     const storedTasks = localStorage.getItem("tasks");
@@ -184,7 +172,7 @@ const CalendarTaskManager = () => {
   };
 
   return (
-    <div className={`min-h-screen h-screen ${darkMode ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-800"}`}>
+    <div className={`${darkMode ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-800"} h-screen overflow-hidden`}>
       <div className="flex h-full">
         {/* Calendar Section */}
         <div className="flex-1 p-4 overflow-auto flex flex-col">
@@ -219,15 +207,6 @@ const CalendarTaskManager = () => {
                   <FiChevronRight size={20} />
                 </button>
               </div>
-            </div>
-            
-            <div className="flex space-x-4 items-center">
-              <button
-                onClick={toggleDarkMode}
-                className={`p-2 rounded-full ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
-              >
-                {darkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
-              </button>
             </div>
           </div>
 
