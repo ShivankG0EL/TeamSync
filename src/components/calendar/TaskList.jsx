@@ -2,9 +2,13 @@ import React, { useState } from "react";
 import { format, isPast, isToday } from "date-fns";
 import { FiEdit, FiTrash2, FiPlus, FiCheck, FiX } from "react-icons/fi";
 import { useTheme } from "../../context/ThemeContext";
+import { useDispatch, useSelector } from "react-redux";
+import { deleteTask, updateTask } from "../../redux/taskSlice";
 
-const TaskList = ({ selectedDate, selectedDateTasks, setShowModal, handleDeleteTask, updateTask }) => {
+const TaskList = ({ selectedDate, selectedDateTasks, setShowModal }) => {
   const { darkMode } = useTheme();
+  const dispatch = useDispatch();
+  const taskError = useSelector((state) => state.tasks.error);
   
   const [editingTask, setEditingTask] = useState(null);
   const [editFormData, setEditFormData] = useState(null);
@@ -13,7 +17,7 @@ const TaskList = ({ selectedDate, selectedDateTasks, setShowModal, handleDeleteT
   const isSelectedDatePast = isPast(selectedDate) && !isToday(selectedDate);
 
   const startEditing = (task) => {
-    setEditingTask(task.id);
+    setEditingTask(task._id);
     setEditFormData({ ...task });
   };
 
@@ -24,14 +28,37 @@ const TaskList = ({ selectedDate, selectedDateTasks, setShowModal, handleDeleteT
 
   const saveEdit = () => {
     if (!editFormData || !editFormData.title) return;
-    updateTask(editFormData);
-    setEditingTask(null);
-    setEditFormData(null);
+    
+    console.log("Updating task:", editFormData);
+    dispatch(updateTask(editFormData))
+      .unwrap()
+      .then(() => {
+        setEditingTask(null);
+        setEditFormData(null);
+      })
+      .catch((error) => {
+        console.error("Failed to update task:", error);
+        // You could add error handling UI here
+      });
   };
 
   const toggleTaskStatus = (task) => {
     const newStatus = task.status === 'completed' ? 'upcoming' : 'completed';
-    updateTask({ ...task, status: newStatus });
+    dispatch(updateTask({ ...task, status: newStatus }))
+      .unwrap()
+      .catch((error) => {
+        console.error("Failed to update task status:", error);
+      });
+  };
+
+  const handleDeleteTask = (taskId) => {
+    if (window.confirm("Are you sure you want to delete this task?")) {
+      dispatch(deleteTask(taskId))
+        .unwrap()
+        .catch((error) => {
+          console.error("Failed to delete task:", error);
+        });
+    }
   };
 
   const getStatusColor = (status) => {
@@ -69,6 +96,13 @@ const TaskList = ({ selectedDate, selectedDateTasks, setShowModal, handleDeleteT
         )}
       </div>
 
+      {/* Show error message if there's an error */}
+      {taskError && (
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-2 mb-4 rounded">
+          <p>Error: {taskError}</p>
+        </div>
+      )}
+
       {selectedDateTasks.length === 0 ? (
         <p className={`text-center py-4 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
           No tasks for this day
@@ -77,14 +111,14 @@ const TaskList = ({ selectedDate, selectedDateTasks, setShowModal, handleDeleteT
         <ul className="space-y-3">
           {selectedDateTasks.map((task) => (
             <li
-              key={task.id}
+              key={task._id}
               className={`p-3 rounded-lg transition ${
                 darkMode 
                   ? "bg-gray-700 hover:bg-gray-600" 
                   : "bg-gray-100 hover:bg-gray-200"
               }`}
             >
-              {editingTask === task.id ? (
+              {editingTask === task._id ? (
                 <div className="space-y-2">
                   <input
                     type="text"
@@ -97,7 +131,7 @@ const TaskList = ({ selectedDate, selectedDateTasks, setShowModal, handleDeleteT
                     }`}
                   />
                   <textarea
-                    value={editFormData.description}
+                    value={editFormData.description || ""}
                     onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
                     className={`w-full p-2 rounded ${
                       darkMode 
@@ -160,7 +194,7 @@ const TaskList = ({ selectedDate, selectedDateTasks, setShowModal, handleDeleteT
                         <FiEdit size={16} />
                       </button>
                       <button
-                        onClick={() => handleDeleteTask(task.id)}
+                        onClick={() => handleDeleteTask(task._id)}
                         className={`p-1 rounded ${
                           darkMode 
                             ? "hover:bg-gray-600 text-gray-300" 

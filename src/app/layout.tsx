@@ -1,8 +1,11 @@
-
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from '../context/ThemeContext';
+import { getServerSession } from "next-auth";
+import SessionProvider from "../components/SessionProvider";
+import { RoleProvider } from '@/context/RoleContext';
+import { ReduxProvider } from '../redux/provider';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,19 +22,27 @@ export const metadata: Metadata = {
   description: "integrating projects with teams",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getServerSession();
+  
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
+        <ReduxProvider>
+          <SessionProvider session={session}>
+            <ThemeProvider>
+              <RoleProvider>
+                {children}
+              </RoleProvider>
+            </ThemeProvider>
+          </SessionProvider>
+        </ReduxProvider>
       </body>
     </html>
   );

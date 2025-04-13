@@ -1,9 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import { FiX, FiUpload, FiClock, FiCheck, FiAlertCircle } from 'react-icons/fi';
+import { FiX, FiUpload, FiCheck } from 'react-icons/fi';
 import { useDropzone } from 'react-dropzone';
 import { format, parseISO } from 'date-fns';
+import { useDispatch } from 'react-redux';
+import { updateTask } from '../../redux/taskSlice';
 
-const TaskPopup = ({ task, darkMode, onClose, onUpdate }) => {
+const TaskPopup = ({ task, darkMode, onClose }) => {
+  const dispatch = useDispatch();
+  
   const [updatedTask, setUpdatedTask] = useState({
     ...task,
     files: task.files || []
@@ -26,7 +30,7 @@ const TaskPopup = ({ task, darkMode, onClose, onUpdate }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onUpdate(updatedTask);
+    dispatch(updateTask(updatedTask));
     onClose();
   };
 
@@ -64,7 +68,7 @@ const TaskPopup = ({ task, darkMode, onClose, onUpdate }) => {
           <div>
             <label className="block text-sm font-medium mb-1">Description</label>
             <textarea
-              value={updatedTask.description}
+              value={updatedTask.description || ""}
               onChange={(e) => setUpdatedTask({ ...updatedTask, description: e.target.value })}
               className={`w-full rounded-md p-2 ${darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"}`}
               rows="3"
@@ -103,7 +107,7 @@ const TaskPopup = ({ task, darkMode, onClose, onUpdate }) => {
               <p className={`mt-2 text-sm ${
                 updatedTask.status === 'overdue' ? 'text-red-500' : 'text-blue-500'
               }`}>
-                Due date: {format(parseISO(updatedTask.dueDate), 'dd MMM yyyy')}
+                Due date: {format(new Date(updatedTask.dueDate), 'dd MMM yyyy')}
               </p>
             )}
           </div>

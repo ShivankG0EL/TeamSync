@@ -27,6 +27,9 @@ export default function AuthPage({ searchParams }) {
   const [loginEmailError, setLoginEmailError] = useState('');
   const [passwordAttempts, setPasswordAttempts] = useState(0);
   const [passwordError, setPasswordError] = useState('');
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [passwordSetupSent, setPasswordSetupSent] = useState(false);
 
   useEffect(() => {
     const isDark = localStorage.getItem("darkMode") === "true";
@@ -87,17 +90,73 @@ export default function AuthPage({ searchParams }) {
     const email = e.target.value;
     setSignupEmail(email);
     setEmailError('');
+    setVerificationSent(false);
+  };
+
+  const sendVerificationEmail = async () => {
+    try {
+      console.log('Sending verification email for:', isLogin ? loginEmail : signupEmail);
+      
+      const res = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: isLogin ? loginEmail : signupEmail,
+          name: signupName || 'User' 
+        })
+      });
+      
+      const data = await res.json();
+      console.log('Verification email response:', data);
+      
+      if (data.success) {
+        if (isLogin) {
+          setLoginEmailError('Verification email sent! Please check your inbox and click the verification link.');
+        } else {
+          setEmailError('Verification email sent! Please check your inbox and click the verification link.');
+        }
+        setVerificationSent(true);
+      } else {
+        if (isLogin) {
+          setLoginEmailError(data.error || 'Failed to send verification email');
+        } else {
+          setEmailError(data.error || 'Failed to send verification email');
+        }
+      }
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      const errorMessage = 'Failed to send verification email. Please try again.';
+      if (isLogin) {
+        setLoginEmailError(errorMessage);
+      } else {
+        setEmailError(errorMessage);
+      }
+    }
   };
 
   const handleEmailContinue = async (e) => {
     e.preventDefault();
+    
+    if (!signupName || !signupName.trim()) {
+      setEmailError('Please enter your name');
+      return;
+    }
+    
+    if (!signupEmail || !signupEmail.trim()) {
+      setEmailError('Please enter your email');
+      return;
+    }
+    
     setIsVerifyingEmail(true);
     try {
+      console.log('Checking email availability:', signupEmail);
+      
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: signupEmail })
       });
+      
       const data = await res.json();
       
       if (data.redirect) {
@@ -107,20 +166,27 @@ export default function AuthPage({ searchParams }) {
       }
       
       if (!data.success) {
-        setEmailError(data.error);
-        setShowPasswordFields(false);
+        setEmailError(data.error || 'This email cannot be used');
       } else {
-        setEmailError('');
-        setShowPasswordFields(true);
+        // Send verification email
+        await sendVerificationEmail();
       }
     } catch (error) {
       console.error('Email verification error:', error);
+      setEmailError('An error occurred. Please try again.');
     }
+    
     setIsVerifyingEmail(false);
   };
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
+    
+    if (signupPassword !== signupConfirmPassword) {
+      setEmailError('Passwords do not match');
+      return;
+    }
+    
     try {
       const res = await fetch('/api/register', {
         method: 'POST',
@@ -143,8 +209,8 @@ export default function AuthPage({ searchParams }) {
         return;
       }
       
-      // Handle successful registration
-      router.push('/user/calendar');
+      setVerificationSent(true);
+      setShowPasswordFields(false);
     } catch (error) {
       console.error('Registration error:', error);
     }
@@ -154,7 +220,7 @@ export default function AuthPage({ searchParams }) {
     e.preventDefault();
     setIsVerifyingLoginEmail(true);
     try {
-      const res = await fetch('/api/login', {
+      const res = await fetch('/api/auth/check-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail })
@@ -168,13 +234,19 @@ export default function AuthPage({ searchParams }) {
       }
       
       if (!data.success) {
-        setLoginEmailError(data.error);
-        setShowLoginPassword(false);
+        if (data.notVerified) {
+          setLoginEmailError('Email not verified. Do you want to verify your email?');
+          setEmailVerified(false);
+          setShowLoginPassword(false);
+        } else {
+          setLoginEmailError(data.error);
+          setShowLoginPassword(false);
+        }
       } else {
         setLoginEmailError('');
         setShowLoginPassword(true);
-        setPasswordAttempts(0); // Reset attempts when showing password field
-        setPasswordError(''); // Clear any previous password errors
+        setPasswordAttempts(0);
+        setPasswordError('');
       }
     } catch (error) {
       console.error('Email verification error:', error);
@@ -182,47 +254,8 @@ export default function AuthPage({ searchParams }) {
     setIsVerifyingLoginEmail(false);
   };
 
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: loginEmail,
-          password: loginPassword
-        })
-      });
-      const data = await res.json();
-
-      if (!data.success) {
-        const newAttempts = passwordAttempts + 1;
-        setPasswordAttempts(newAttempts);
-        
-        if (newAttempts >= 3) {
-          setShowLoginPassword(false);
-          setLoginEmail('');
-          setLoginPassword('');
-          setLoginEmailError('Too many failed attempts. Please try again.');
-          setPasswordError('');
-          return;
-        }
-        
-        setPasswordError(`Invalid password. ${3 - newAttempts} attempts remaining.`);
-        setLoginPassword(''); // Clear password field
-        return;
-      }
-
-      router.push('/user/calendar');
-    } catch (error) {
-      console.error('Login error:', error);
-      setLoginEmailError('An error occurred during login');
-    }
-  };
-
   const handleCloseError = () => {
     setShowError(false);
-    // Remove query parameters from URL without page reload
     window.history.replaceState({}, '', window.location.pathname);
   };
 
@@ -294,7 +327,18 @@ export default function AuthPage({ searchParams }) {
                   } ${showLoginPassword ? 'bg-opacity-50' : ''}`}
                 />
                 {loginEmailError && (
-                  <p className="text-red-500 text-sm mt-1">{loginEmailError}</p>
+                  <div>
+                    <p className="text-red-500 text-sm mt-1">{loginEmailError}</p>
+                    {loginEmailError.includes('not verified') && !verificationSent && (
+                      <button
+                        type="button"
+                        onClick={sendVerificationEmail}
+                        className="w-full mt-2 bg-green-600 text-white py-1 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      >
+                        Send Verification Email
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
               {!showLoginPassword ? (
@@ -314,7 +358,7 @@ export default function AuthPage({ searchParams }) {
                       value={loginPassword}
                       onChange={(e) => {
                         setLoginPassword(e.target.value);
-                        setPasswordError(''); // Clear password error when typing
+                        setPasswordError('');
                       }}
                       className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
@@ -375,7 +419,7 @@ export default function AuthPage({ searchParams }) {
                 <span>GitHub</span>
               </button>
             </div>
-            <form onSubmit={showPasswordFields ? handleSignupSubmit : handleEmailContinue} className="space-y-4">
+            <form onSubmit={handleEmailContinue} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Name</label>
                 <input
@@ -385,6 +429,7 @@ export default function AuthPage({ searchParams }) {
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
                   }`}
+                  disabled={verificationSent}
                 />
               </div>
               <div>
@@ -393,16 +438,21 @@ export default function AuthPage({ searchParams }) {
                   type="email"
                   value={signupEmail}
                   onChange={handleSignupEmailChange}
-                  disabled={showPasswordFields}
+                  disabled={verificationSent}
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                  } ${showPasswordFields ? 'bg-opacity-50' : ''}`}
+                  } ${verificationSent ? 'bg-opacity-50' : ''}`}
                 />
                 {emailError && (
                   <p className="text-red-500 text-sm mt-1">{emailError}</p>
                 )}
+                {verificationSent && !emailError && (
+                  <p className="text-green-500 text-sm mt-1">
+                    Verification email sent! Please check your inbox to verify your email address.
+                  </p>
+                )}
               </div>
-              {!showPasswordFields ? (
+              {!verificationSent ? (
                 <button
                   type="submit"
                   disabled={isVerifyingEmail}
@@ -411,36 +461,17 @@ export default function AuthPage({ searchParams }) {
                   {isVerifyingEmail ? 'Checking...' : 'Continue'}
                 </button>
               ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Password</label>
-                    <input
-                      type="password"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Confirm Password</label>
-                    <input
-                      type="password"
-                      value={signupConfirmPassword}
-                      onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
-                      }`}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Create Account
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerificationSent(false);
+                    setSignupEmail('');
+                    setSignupName('');
+                  }}
+                  className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Register Another Email
+                </button>
               )}
             </form>
             <p className="mt-4 text-center">

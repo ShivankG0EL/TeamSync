@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import Sidebar from './Sidebar';
+import Sidebar from './Sidebar/Sidebar';
 import { FiMenu } from 'react-icons/fi';
 import { useTheme } from '../context/ThemeContext';
 
@@ -12,17 +12,13 @@ const Layout = ({ children }: LayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { darkMode, toggleDarkMode } = useTheme();
 
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
-
   return (
     <div className={`min-h-screen ${darkMode ? "bg-gray-900 text-gray-100" : "bg-gray-100 text-gray-800"}`}>
       <div className="flex">
         {/* Sidebar with theme toggle */}
         <Sidebar 
           isCollapsed={isCollapsed} 
-          toggleSidebar={toggleSidebar} 
+          toggleSidebar={() => setIsCollapsed(!isCollapsed)} 
           darkMode={darkMode}
           toggleDarkMode={toggleDarkMode}
         />
@@ -32,7 +28,7 @@ const Layout = ({ children }: LayoutProps) => {
           {/* Toggle button for collapsed sidebar */}
           {isCollapsed && (
             <button 
-              onClick={toggleSidebar}
+              onClick={() => setIsCollapsed(false)}
               className={`fixed top-4 left-4 z-10 p-2 rounded-md ${
                 darkMode ? "bg-gray-800 shadow-gray-900" : "bg-white"
               } shadow-md ${
@@ -48,6 +44,6 @@ const Layout = ({ children }: LayoutProps) => {
       </div>
     </div>
   );
-};
+}
 
 export default Layout;

@@ -1,15 +1,22 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, parseISO, isPast, addMonths, subMonths } from "date-fns";
-import { FiX, FiPlus, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import TaskList from './TaskList';
 import { useTheme } from "../../context/ThemeContext";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchTasks, addTask } from "../../redux/taskSlice";
+import { useSession } from "next-auth/react";
 
 const CalendarTaskManager = () => {
   const { darkMode } = useTheme();
+  const dispatch = useDispatch();
+  const { data: session, status: authStatus } = useSession();
+  const tasks = useSelector((state) => state.tasks.items);
+  const taskStatus = useSelector((state) => state.tasks.status);
+  const error = useSelector((state) => state.tasks.error);
   
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [tasks, setTasks] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [newTask, setNewTask] = useState({
@@ -21,81 +28,67 @@ const CalendarTaskManager = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
-    const storedTasks = localStorage.getItem("tasks");
-    if (storedTasks) {
-      setTasks(JSON.parse(storedTasks));
+    // Only fetch tasks if the user is authenticated and tasks haven't been loaded yet
+    if (authStatus === "authenticated" && taskStatus === 'idle') {
+      console.log("Fetching tasks for user:", session?.user?.id);
+      dispatch(fetchTasks());
     }
-  }, []);
+  }, [dispatch, taskStatus, authStatus, session]);
 
+  // Error handling for task operations
   useEffect(() => {
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-  }, [tasks]);
+    if (error) {
+      console.error("Task operation failed:", error);
+      // You could add toast notifications here
+    }
+  }, [error]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  const handleAddTask = (e) => {
-    e.preventDefault();
-    if (!newTask.title || !newTask.dueDate) return;
-
-    setTasks([...tasks, { ...newTask, id: Date.now() }]);
-    setNewTask({
-      title: "",
-      description: "",
-      dueDate: format(new Date(), "yyyy-MM-dd"),
-      status: "upcoming"
-    });
-    setShowModal(false);
-  };
-
-  const handleDeleteTask = (taskId) => {
-    setTasks(tasks.filter((task) => task.id !== taskId));
-  };
-
-  const updateTask = (updatedTask) => {
-    setTasks(tasks.map(task => 
-      task.id === updatedTask.id ? updatedTask : task
-    ));
-  };
-
   const getTaskStatus = (task) => {
     if (task.status === 'completed') return 'completed';
-    const dueDate = parseISO(task.dueDate);
+    const dueDate = typeof task.dueDate === 'string' ? parseISO(task.dueDate) : new Date(task.dueDate);
     return isPast(dueDate) && format(dueDate, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')
       ? 'overdue'
       : 'upcoming';
   };
 
-  const filteredTasks = tasks.filter(
-    (task) =>
+  const filteredTasks = tasks
+    .filter(task => 
       task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchQuery.toLowerCase())
-  ).map(task => ({
-    ...task,
-    status: getTaskStatus(task)
-  }));
+      (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    .map(task => ({
+      ...task,
+      status: getTaskStatus(task)
+    }));
 
-  const selectedDateTasks = tasks.filter(
-    (task) => format(parseISO(task.dueDate), "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd")
-  ).map(task => ({
-    ...task,
-    status: getTaskStatus(task)
-  }));
+  const selectedDateTasks = tasks
+    .filter(task => {
+      const taskDate = typeof task.dueDate === 'string' ? parseISO(task.dueDate) : new Date(task.dueDate);
+      return format(taskDate, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+    })
+    .map(task => ({
+      ...task,
+      status: getTaskStatus(task)
+    }));
 
   const TaskModal = () => {
     const [formData, setFormData] = useState({
       title: newTask.title,
       description: newTask.description,
-      dueDate: format(selectedDate, "yyyy-MM-dd"), // Use selectedDate instead of current date
-      status: newTask.status
+      dueDate: format(selectedDate, "yyyy-MM-dd"),
+      status: "upcoming"
     });
 
     const handleSubmit = (e) => {
       e.preventDefault();
       if (!formData.title || !formData.dueDate) return;
 
-      setTasks([...tasks, { ...formData, id: Date.now() }]);
+      console.log("Adding new task:", formData);
+      dispatch(addTask(formData));
       setNewTask({
         title: "",
         description: "",
@@ -159,6 +152,35 @@ const CalendarTaskManager = () => {
     );
   };
 
+  // Display loading state
+  if (authStatus === "loading" || taskStatus === 'loading') {
+    return (
+      <div className={`flex items-center justify-center h-screen ${darkMode ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-800"}`}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-lg">Loading tasks...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Display error state
+  if (authStatus === "unauthenticated") {
+    return (
+      <div className={`flex items-center justify-center h-screen ${darkMode ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-800"}`}>
+        <div className="text-center p-6 max-w-md">
+          <p className="text-xl mb-4">Please sign in to access your tasks</p>
+          <a 
+            href="/auth/signin" 
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Sign In
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const handlePreviousMonth = () => {
     setCurrentDate(prevDate => subMonths(prevDate, 1));
   };
@@ -219,9 +241,10 @@ const CalendarTaskManager = () => {
 
             <div className="grid grid-cols-7 gap-4 flex-1">
               {monthDays.map((day) => {
-                const hasTask = filteredTasks.some(
-                  (task) => format(parseISO(task.dueDate), "yyyy-MM-dd") === format(day, "yyyy-MM-dd")
-                );
+                const hasTask = filteredTasks.some(task => {
+                  const taskDate = typeof task.dueDate === 'string' ? parseISO(task.dueDate) : new Date(task.dueDate);
+                  return format(taskDate, "yyyy-MM-dd") === format(day, "yyyy-MM-dd");
+                });
 
                 return (
                   <div
@@ -254,12 +277,9 @@ const CalendarTaskManager = () => {
 
         {/* Task List Section */}
         <TaskList 
-          darkMode={darkMode}
           selectedDate={selectedDate}
           selectedDateTasks={selectedDateTasks}
           setShowModal={setShowModal}
-          handleDeleteTask={handleDeleteTask}
-          updateTask={updateTask}
         />
       </div>
       {showModal && <TaskModal />}
