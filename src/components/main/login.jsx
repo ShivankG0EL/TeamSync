@@ -40,9 +40,9 @@ export default function AuthPage({ searchParams }) {
   }, []);
 
   useEffect(() => {
-    const error = searchParams.get('error');
-    const provider = searchParams.get('provider');
-    const email = searchParams.get('email');
+    const error = searchParams?.get?.('error');
+    const provider = searchParams?.get?.('provider');
+    const email = searchParams?.get?.('email');
     
     if (error === 'wrong_provider' && provider && email) {
       setErrorMessage(`This email (${email}) is already registered with ${provider}. Please use ${provider} to login.`);
@@ -252,6 +252,32 @@ export default function AuthPage({ searchParams }) {
       console.error('Email verification error:', error);
     }
     setIsVerifyingLoginEmail(false);
+  };
+
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: loginEmail,
+        password: loginPassword,
+      });
+      
+      if (result.error) {
+        setPasswordAttempts(prev => prev + 1);
+        setPasswordError(result.error);
+        
+        if (passwordAttempts >= 2) {
+          setPasswordError('Forgotten your password?');
+        }
+      } else {
+        router.push('/user/calendar');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setPasswordError('An error occurred during login');
+    }
   };
 
   const handleCloseError = () => {

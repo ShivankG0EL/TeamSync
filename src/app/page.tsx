@@ -1,5 +1,9 @@
-import LoginPage from '../components/main/LoginPage';
+'use client'
 
-export default function Home() {
-  return <LoginPage />;
+import { useSearchParams } from 'next/navigation';
+import Login from '../components/main/login';
+
+export default function LoginPage() {
+  const searchParams = useSearchParams();
+  return <Login searchParams={searchParams} />;
 }
