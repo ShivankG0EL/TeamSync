@@ -51,5 +51,6 @@ authSchema.statics.verifyToken = async function(token) {
   }
 };
 
-const Auth = mongoose.model('Auth', authSchema);
+// Fix the OverwriteModelError by checking if the model exists before creating it
+const Auth = mongoose.models.Auth || mongoose.model('Auth', authSchema);
 export default Auth;
