@@ -24,6 +24,11 @@ const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { user } = useSelector(state => state.auth);
   const pathname = usePathname();
+  
+  // Don't show navbar on auth pages
+  if (pathname.includes('/auth')) {
+    return null;
+  }
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -81,22 +86,22 @@ const Navbar = () => {
               <>
                 <motion.div variants={navItemVariants} whileHover="hover">
                   <Link 
-                    href={`/${user?.role}/projects`}
-                    className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
-                      pathname.includes('/projects') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
-                    }`}
-                  >
-                    <FaProjectDiagram className="mr-2" /> Projects
-                  </Link>
-                </motion.div>
-                <motion.div variants={navItemVariants} whileHover="hover">
-                  <Link 
                     href="/admin/teams"
                     className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
                       pathname.includes('/teams') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
                     }`}
                   >
                     <FaUsers className="mr-2" /> Teams
+                  </Link>
+                </motion.div>
+                <motion.div variants={navItemVariants} whileHover="hover">
+                  <Link 
+                    href="/admin/users"
+                    className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
+                      pathname.includes('/users') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
+                    }`}
+                  >
+                    <FaUserCog className="mr-2" /> Users
                   </Link>
                 </motion.div>
               </>
@@ -228,18 +233,18 @@ const Navbar = () => {
               {user?.role === 'admin' && (
                 <>
                   <Link
-                    href={`/${user?.role}/projects`}
-                    className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <FaProjectDiagram className="mr-2 text-[#8b5cf6]" /> Projects
-                  </Link>
-                  <Link
                     href="/admin/teams"
                     className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <FaUsers className="mr-2 text-[#8b5cf6]" /> Teams
+                  </Link>
+                  <Link
+                    href="/admin/users"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <FaUserCog className="mr-2 text-[#8b5cf6]" /> Users
                   </Link>
                 </>
               )}

@@ -17,8 +17,6 @@ export async function GET(request) {
     const session = await getServerSession(authOptions);
     console.log("Session in users API:", session);
     
-    // For debugging - temporarily return users regardless of session
-    // In production, you would enforce proper authorization
     await connectDB();
     
     // Get users from all collections
@@ -26,41 +24,70 @@ export async function GET(request) {
     const leaders = await Leader.find({}, 'name email position status joinedAt teams');
     const admins = await Admin.find({}, 'name email role status createdAt');
     
-    // Prepare response
-    const users = [
-      ...members.map(member => ({
-        ...member.toObject(),
-        userType: 'member',
-        createdAt: member.joinedAt
-      })),
-      ...leaders.map(leader => ({
-        ...leader.toObject(),
-        userType: 'leader',
-        role: 'leader',
-        createdAt: leader.joinedAt
-      })),
-      ...admins.map(admin => ({
-        ...admin.toObject(),
-        userType: 'admin',
-        role: admin.role || 'admin'
-      }))
-    ];
+    // Create a map to track unique users by email
+    const userMap = new Map();
     
-    console.log(`Found ${users.length} users`);
+    // Process members
+    members.forEach(member => {
+      const email = member.email;
+      if (!userMap.has(email)) {
+        userMap.set(email, {
+          _id: member._id,
+          name: member.name,
+          email: member.email,
+          roles: [{ type: 'member', id: member._id }],
+          status: member.status,
+          createdAt: member.joinedAt,
+          team: member.team
+        });
+      } else {
+        const user = userMap.get(email);
+        user.roles.push({ type: 'member', id: member._id });
+      }
+    });
+    
+    // Process leaders
+    leaders.forEach(leader => {
+      const email = leader.email;
+      if (!userMap.has(email)) {
+        userMap.set(email, {
+          _id: leader._id,
+          name: leader.name,
+          email: leader.email,
+          roles: [{ type: 'leader', id: leader._id }],
+          status: leader.status,
+          createdAt: leader.joinedAt,
+          teams: leader.teams
+        });
+      } else {
+        const user = userMap.get(email);
+        user.roles.push({ type: 'leader', id: leader._id });
+      }
+    });
+    
+    // Process admins
+    admins.forEach(admin => {
+      const email = admin.email;
+      if (!userMap.has(email)) {
+        userMap.set(email, {
+          _id: admin._id,
+          name: admin.name,
+          email: admin.email,
+          roles: [{ type: 'admin', id: admin._id, adminRole: admin.role || 'admin' }],
+          status: admin.status,
+          createdAt: admin.createdAt,
+        });
+      } else {
+        const user = userMap.get(email);
+        user.roles.push({ type: 'admin', id: admin._id, adminRole: admin.role || 'admin' });
+      }
+    });
+    
+    // Convert map to array
+    const users = Array.from(userMap.values());
+    
+    console.log(`Found ${users.length} unique users with multiple roles`);
     return NextResponse.json({ users });
-    
-    // Uncomment this for proper authorization in production
-    /*
-    if (!session) {
-      console.log("No session found in users route");
-      return NextResponse.json({ error: 'Unauthorized - Not signed in' }, { status: 401 });
-    }
-    
-    if (session.user?.role !== 'admin') {
-      console.log("Not admin role in users route:", session.user?.role);
-      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 403 });
-    }
-    */
   } catch (error) {
     console.error('Fetch users error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -78,84 +105,120 @@ export async function POST(request) {
 
     await connectDB();
     const data = await request.json();
-    const { name, email, role, password, teamId } = data;
+    const { name, email, roles, password, teamId } = data;
 
-    if (!name || !email || !role) {
+    if (!name || !email || !roles || !roles.length) {
       return NextResponse.json({ 
-        error: 'Name, email, and role are required' 
+        error: 'Name, email, and at least one role are required' 
       }, { status: 400 });
     }
 
-    // Check if user already exists in any collection
-    const existingMember = await Member.findOne({ email });
-    const existingLeader = await Leader.findOne({ email });
-    const existingAdmin = await Admin.findOne({ email });
-
-    if (existingMember || existingLeader || existingAdmin) {
-      return NextResponse.json({ 
-        error: 'User with this email already exists' 
-      }, { status: 409 });
-    }
-
-    let user;
+    // Hash password if provided
     const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+    
+    // Create user records for each role
+    const createdUsers = [];
+    const baseUserData = {
+      name,
+      email,
+      password: hashedPassword,
+      status: 'active',
+      isActive: true
+    };
 
-    // Create user based on role
-    if (role === 'member') {
-      user = await Member.create({
-        name,
-        email,
-        role: 'member',
-        password: hashedPassword,
-        team: teamId || null,
-        status: 'active',
-        isActive: true,
-        joinedAt: new Date()
-      });
+    // Check for existing users with this email in any collection
+    const existingAdmin = await Admin.findOne({ email });
+    const existingLeader = await Leader.findOne({ email });
+    const existingMember = await Member.findOne({ email });
+
+    // For each role, create or update the user in appropriate collection
+    for (const role of roles) {
+      if (role === 'admin') {
+        if (existingAdmin) {
+          createdUsers.push({ type: 'admin', id: existingAdmin._id });
+        } else {
+          const admin = await Admin.create({
+            ...baseUserData,
+            role: 'admin',
+            createdAt: new Date()
+          });
+          createdUsers.push({ type: 'admin', id: admin._id });
+        }
+      } 
       
-      // Add member to team if specified
-      if (teamId) {
-        await Team.findByIdAndUpdate(teamId, {
-          $push: { members: user._id }
-        });
-      }
-    } else if (role === 'leader') {
-      user = await Leader.create({
-        name,
-        email,
-        position: data.position || 'Team Leader',
-        password: hashedPassword,
-        teams: teamId ? [teamId] : [],
-        status: 'active',
-        isActive: true,
-        joinedAt: new Date()
-      });
+      else if (role === 'leader') {
+        if (existingLeader) {
+          createdUsers.push({ type: 'leader', id: existingLeader._id });
+          
+          // Add team to existing leader if specified
+          if (teamId && !existingLeader.teams.includes(teamId)) {
+            await Leader.findByIdAndUpdate(existingLeader._id, {
+              $push: { teams: teamId }
+            });
+            
+            // Update team with leader reference
+            await Team.findByIdAndUpdate(teamId, {
+              leader: existingLeader._id
+            });
+          }
+        } else {
+          const leader = await Leader.create({
+            ...baseUserData,
+            position: 'Team Leader',
+            teams: teamId ? [teamId] : [],
+            joinedAt: new Date()
+          });
+          createdUsers.push({ type: 'leader', id: leader._id });
+          
+          // Update team with leader reference
+          if (teamId) {
+            await Team.findByIdAndUpdate(teamId, {
+              leader: leader._id
+            });
+          }
+        }
+      } 
       
-      // Update team with leader if specified
-      if (teamId) {
-        await Team.findByIdAndUpdate(teamId, {
-          leader: user._id
-        });
+      else if (role === 'member') {
+        if (existingMember) {
+          createdUsers.push({ type: 'member', id: existingMember._id });
+          
+          // Add team to existing member if specified
+          if (teamId && existingMember.team !== teamId) {
+            await Member.findByIdAndUpdate(existingMember._id, {
+              team: teamId
+            });
+            
+            // Add member to team
+            await Team.findByIdAndUpdate(teamId, {
+              $push: { members: existingMember._id }
+            });
+          }
+        } else {
+          const member = await Member.create({
+            ...baseUserData,
+            role: 'member',
+            team: teamId || null,
+            joinedAt: new Date()
+          });
+          createdUsers.push({ type: 'member', id: member._id });
+          
+          // Add member to team
+          if (teamId) {
+            await Team.findByIdAndUpdate(teamId, {
+              $push: { members: member._id }
+            });
+          }
+        }
       }
-    } else if (role === 'admin') {
-      user = await Admin.create({
-        name,
-        email,
-        role: 'admin',
-        password: hashedPassword,
-        status: 'active',
-        isActive: true,
-        createdAt: new Date()
-      });
     }
 
     return NextResponse.json({ 
       success: true, 
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: role
+        name,
+        email,
+        roles: createdUsers
       }
     });
   } catch (error) {

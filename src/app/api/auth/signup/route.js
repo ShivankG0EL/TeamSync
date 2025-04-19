@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/dbConfig';
 import Member from '@/lib/dbmodels/member';
+import Leader from '@/lib/dbmodels/leader';
+import Admin from '@/lib/dbmodels/admin';
 import { sendSetupPasswordEmail } from '@/lib/emailUtils';
 import jwt from 'jsonwebtoken';
 
@@ -18,48 +20,56 @@ export async function POST(request) {
     
     await connectDB();
     
-    const existingUser = await Member.findOne({ email });
+    // Check if email exists in any user collection
+    const existingMember = await Member.findOne({ email });
+    const existingLeader = await Leader.findOne({ email });
+    const existingAdmin = await Admin.findOne({ email });
     
-    // Check if user exists but is pending
-    if (existingUser && existingUser.status === 'pending') {
-      // If resendVerification flag is true, regenerate token and send email
-      if (resendVerification) {
-        const setupToken = jwt.sign(
-          { userId: existingUser._id },
-          process.env.JWT_SECRET,
-          { expiresIn: '1h' }
-        );
-        
-        await sendSetupPasswordEmail({
-          email,
-          name: existingUser.name,
-          token: setupToken
-        });
-        
-        return NextResponse.json(
-          { 
-            success: true,
-            message: 'Verification link has been resent to your email',
-          },
-          { status: 200 }
-        );
-      } else {
-        // If not resending, inform that account exists but is pending
+    // Determine if user exists anywhere
+    const existingUser = existingMember || existingLeader || existingAdmin;
+    
+    // If resending verification for a pending member
+    if (existingMember && existingMember.status === 'pending' && resendVerification) {
+      const setupToken = jwt.sign(
+        { userId: existingMember._id },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+      
+      await sendSetupPasswordEmail({
+        email,
+        name: existingMember.name,
+        token: setupToken
+      });
+      
+      return NextResponse.json(
+        { 
+          success: true,
+          message: 'Verification link has been resent to your email',
+        },
+        { status: 200 }
+      );
+    }
+    
+    // User exists in any collection
+    if (existingUser) {
+      // For pending member allow resending verification
+      if (existingMember && existingMember.status === 'pending') {
         return NextResponse.json(
           { 
             error: 'Account exists but is not verified',
             pendingVerification: true,
-            userId: existingUser._id
+            userId: existingMember._id
           },
           { status: 409 }
         );
+      } else {
+        // User exists in some form
+        return NextResponse.json(
+          { error: 'User with this email already exists' },
+          { status: 409 }
+        );
       }
-    } else if (existingUser) {
-      // User exists and is not pending
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 }
-      );
     }
     
     // Input validation for new signup

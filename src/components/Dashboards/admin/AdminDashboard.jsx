@@ -94,13 +94,6 @@ const AdminDashboard = () => {
                   </div>
                   <span className="font-bold text-[#3a3a3a] bg-[#e8e0d8] px-3 py-1 rounded-full">48</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-[#f3f0e9] rounded-md">
-                  <div className="flex items-center">
-                    <FaLayerGroup className="text-[#8b5cf6] mr-2" />
-                    <span className="text-[#4b5563]">Active Projects</span>
-                  </div>
-                  <span className="font-bold text-[#3a3a3a] bg-[#e8e0d8] px-3 py-1 rounded-full">8</span>
-                </div>
               </div>
               <motion.button 
                 whileHover={{ scale: 1.02 }}
