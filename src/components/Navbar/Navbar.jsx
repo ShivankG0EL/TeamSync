@@ -277,6 +277,13 @@ const Navbar = () => {
                   <FaUsers className="mr-2 text-[#8b5cf6]" /> Team
                 </Link>
               )}
+              <Link
+                href="/profile"
+                className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <FaUserCircle className="mr-2 text-[#8b5cf6]" /> Your Profile
+              </Link>
             </div>
             <div className="px-3 py-2 border-t mt-2 border-[#e8e0d8]">
               <div className="flex items-center">

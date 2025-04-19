@@ -1,10 +1,5 @@
-import React from 'react'
-import LeaderDashboard from '../../../components/Dashboards/leader/LeaderDashboard'
+import LeaderDashboard from '@/components/Dashboards/leader/LeaderDashboard';
 
-const page = () => {
-  return (
-    <LeaderDashboard/>
-  )
+export default function LeaderDashboardPage() {
+  return <LeaderDashboard />;
 }
-
-export default page

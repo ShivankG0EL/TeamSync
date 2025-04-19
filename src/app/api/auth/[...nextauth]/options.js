@@ -1,71 +1,61 @@
-import connectDB from '@/lib/dbConfig';
-import Admin from '@/lib/dbmodels/admin';
-import Leader from '@/lib/dbmodels/leader';
-import Member from '@/lib/dbmodels/member';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcrypt';
+import CredentialsProvider from "next-auth/providers/credentials";
+import connectDB from "@/lib/dbConfig";
+import Member from "@/lib/dbmodels/member";
+import Leader from "@/lib/dbmodels/leader";
+import Admin from "@/lib/dbmodels/admin";
 
 export const authOptions = {
   providers: [
     CredentialsProvider({
-      name: 'Credentials',
+      name: "Credentials",
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' }
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+        role: { label: "Role", type: "text" }
       },
       async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password || !credentials?.role) {
+          return null;
+        }
+
         try {
           await connectDB();
           
-          // Try to find user in all collections
-          let user = null;
-          let role = '';
+          // Find user based on role
+          let user;
+          const { email, role } = credentials;
           
-          // Check Admin collection
-          user = await Admin.findOne({ email: credentials.email });
-          if (user) role = 'admin';
-          
-          // Check Leader collection if not found in Admin
-          if (!user) {
-            user = await Leader.findOne({ email: credentials.email });
-            if (user) role = 'leader';
+          if (role === 'member') {
+            user = await Member.findOne({ email });
+          } else if (role === 'leader') {
+            user = await Leader.findOne({ email });
+          } else if (role === 'admin') {
+            user = await Admin.findOne({ email });
           }
           
-          // Check Member collection if not found in Leader
-          if (!user) {
-            user = await Member.findOne({ email: credentials.email });
-            if (user) role = 'member';
-          }
-          
-          // Return null if user not found
-          if (!user) {
-            console.log('User not found');
+          // If no user found or password doesn't match
+          if (!user || !(await user.comparePassword(credentials.password))) {
             return null;
           }
           
-          // Verify password
-          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
-          if (!isPasswordValid) {
-            console.log('Invalid password');
-            return null;
-          }
-          
-          console.log(`User authenticated: ${user.name}, role: ${role}`);
-          
-          // Return user object for JWT token
           return {
             id: user._id.toString(),
             name: user.name,
             email: user.email,
-            role: role
+            role: role,
+            image: user.avatar || null
           };
         } catch (error) {
-          console.error('Auth error:', error);
+          console.error("NextAuth authorize error:", error);
           return null;
         }
-      }
-    })
+      },
+    }),
   ],
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -80,13 +70,11 @@ export const authOptions = {
         session.user.role = token.role;
       }
       return session;
-    }
+    },
   },
   pages: {
-    signIn: '/auth/signin',
+    signIn: "/auth/signin",
+    error: "/auth/error",
   },
-  session: {
-    strategy: 'jwt',
-  },
-  debug: process.env.NODE_ENV === 'development',
+  secret: process.env.NEXTAUTH_SECRET,
 };

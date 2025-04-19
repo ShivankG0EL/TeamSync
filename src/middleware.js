@@ -15,8 +15,8 @@ export async function middleware(request) {
   
   // Define role-based route access
   const adminRoutes = ['/admin', '/api/admin'];
-  const leaderRoutes = ['/leader', '/teams', '/api/teams'];
-  const memberRoutes = ['/member', '/tasks', '/api/tasks'];
+  const leaderRoutes = ['/leader', '/api/leader'];
+  const memberRoutes = ['/member', '/api/member'];
   
   // Check if the user is authenticated
   if (!token && !isPublicRoute) {
@@ -34,7 +34,8 @@ export async function middleware(request) {
     // Check role-based access for protected routes
     if (
       (adminRoutes.some(route => pathname.startsWith(route)) && token.role !== 'admin') ||
-      (leaderRoutes.some(route => pathname.startsWith(route)) && !['admin', 'leader'].includes(token.role))
+      (leaderRoutes.some(route => pathname.startsWith(route)) && token.role !== 'leader' && token.role !== 'admin') ||
+      (memberRoutes.some(route => pathname.startsWith(route)) && token.role !== 'member' && token.role !== 'leader' && token.role !== 'admin')
     ) {
       return NextResponse.redirect(new URL('/unauthorized', request.url));
     }
