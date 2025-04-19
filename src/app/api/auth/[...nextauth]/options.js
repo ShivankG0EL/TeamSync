@@ -1,68 +1,68 @@
-import CredentialsProvider from "next-auth/providers/credentials";
-import connectDB from "@/lib/dbConfig";
-import Member from "@/lib/dbmodels/member";
-import Leader from "@/lib/dbmodels/leader";
-import Admin from "@/lib/dbmodels/admin";
-
-const findUserByRole = async (email, role) => {
-  let user = null;
-  
-  switch(role) {
-    case "member":
-      user = await Member.findOne({ email });
-      break;
-    case "leader":
-      user = await Leader.findOne({ email });
-      break;
-    case "admin":
-      user = await Admin.findOne({ email });
-      break;
-    default:
-      throw new Error("Invalid role");
-  }
-  
-  return user;
-};
+import connectDB from '@/lib/dbConfig';
+import Admin from '@/lib/dbmodels/admin';
+import Leader from '@/lib/dbmodels/leader';
+import Member from '@/lib/dbmodels/member';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import bcrypt from 'bcrypt';
 
 export const authOptions = {
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-        role: { label: "Role", type: "text" }
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        await connectDB();
-        
-        if (!credentials?.email || !credentials?.password || !credentials?.role) {
-          throw new Error("Missing required credentials");
+        try {
+          await connectDB();
+          
+          // Try to find user in all collections
+          let user = null;
+          let role = '';
+          
+          // Check Admin collection
+          user = await Admin.findOne({ email: credentials.email });
+          if (user) role = 'admin';
+          
+          // Check Leader collection if not found in Admin
+          if (!user) {
+            user = await Leader.findOne({ email: credentials.email });
+            if (user) role = 'leader';
+          }
+          
+          // Check Member collection if not found in Leader
+          if (!user) {
+            user = await Member.findOne({ email: credentials.email });
+            if (user) role = 'member';
+          }
+          
+          // Return null if user not found
+          if (!user) {
+            console.log('User not found');
+            return null;
+          }
+          
+          // Verify password
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+          if (!isPasswordValid) {
+            console.log('Invalid password');
+            return null;
+          }
+          
+          console.log(`User authenticated: ${user.name}, role: ${role}`);
+          
+          // Return user object for JWT token
+          return {
+            id: user._id.toString(),
+            name: user.name,
+            email: user.email,
+            role: role
+          };
+        } catch (error) {
+          console.error('Auth error:', error);
+          return null;
         }
-        
-        const user = await findUserByRole(credentials.email, credentials.role);
-        
-        if (!user) {
-          throw new Error("User not found");
-        }
-        
-        const isPasswordValid = await user.comparePassword(credentials.password);
-        
-        if (!isPasswordValid) {
-          throw new Error("Invalid password");
-        }
-        
-        // Update last login time
-        user.lastLogin = new Date();
-        await user.save();
-        
-        return {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-          role: credentials.role,
-          company: user.company?.toString()
-        };
       }
     })
   ],
@@ -71,7 +71,6 @@ export const authOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
-        token.company = user.company;
       }
       return token;
     },
@@ -79,19 +78,15 @@ export const authOptions = {
       if (token) {
         session.user.id = token.id;
         session.user.role = token.role;
-        session.user.company = token.company;
       }
       return session;
     }
   },
   pages: {
     signIn: '/auth/signin',
-    signOut: '/auth/signout',
-    error: '/auth/error',
   },
   session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
 };

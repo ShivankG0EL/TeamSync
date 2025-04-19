@@ -6,21 +6,27 @@ import Member from '@/lib/dbmodels/member';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 
-// Get a specific team
+// Get team details
 export async function GET(request, { params }) {
   try {
     const { teamId } = params;
+    
     // Check authorization
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized - Not signed in' }, { status: 401 });
+    }
+    
+    if (session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 403 });
     }
 
     await connectDB();
     
+    // Get team details with populated leader and members
     const team = await Team.findById(teamId)
       .populate('leader', 'name email')
-      .populate('members', 'name email role');
+      .populate('members', 'name email');
     
     if (!team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
@@ -33,10 +39,11 @@ export async function GET(request, { params }) {
   }
 }
 
-// Update a team
+// Update team
 export async function PUT(request, { params }) {
   try {
     const { teamId } = params;
+    
     // Check authorization
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'admin') {
@@ -47,67 +54,29 @@ export async function PUT(request, { params }) {
     const data = await request.json();
     const { name, description, leaderId, memberIds } = data;
 
+    // Find the team
     const team = await Team.findById(teamId);
     if (!team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
-    // Handle leader change
-    if (leaderId && leaderId !== team.leader?.toString()) {
-      // Remove team from previous leader if exists
-      if (team.leader) {
-        await Leader.findByIdAndUpdate(team.leader, {
-          $pull: { teams: teamId }
-        });
-      }
-      
-      // Add team to new leader
-      await Leader.findByIdAndUpdate(leaderId, {
-        $push: { teams: teamId }
-      });
-    }
-
-    // Handle members change
-    if (memberIds) {
-      // Get current members to find removed ones
-      const currentMembers = team.members.map(id => id.toString());
-      const removedMembers = currentMembers.filter(id => !memberIds.includes(id));
-      
-      // Remove team from removed members
-      if (removedMembers.length > 0) {
-        await Member.updateMany(
-          { _id: { $in: removedMembers } },
-          { $unset: { team: "" } }
-        );
-      }
-      
-      // Add team to new members
-      const newMembers = memberIds.filter(id => !currentMembers.includes(id));
-      if (newMembers.length > 0) {
-        await Member.updateMany(
-          { _id: { $in: newMembers } },
-          { $set: { team: teamId } }
-        );
-      }
-    }
-
-    // Update team
+    // Update team document
     const updatedTeam = await Team.findByIdAndUpdate(
       teamId,
       {
         name: name || team.name,
         description: description !== undefined ? description : team.description,
-        leader: leaderId || team.leader,
+        leader: leaderId !== undefined ? (leaderId || null) : team.leader,
         members: memberIds || team.members,
         updatedAt: new Date()
       },
       { new: true }
     ).populate('leader', 'name email')
-      .populate('members', 'name email role');
+     .populate('members', 'name email');
 
     return NextResponse.json({ 
       success: true, 
-      team: updatedTeam 
+      team: updatedTeam
     });
   } catch (error) {
     console.error('Update team error:', error);
@@ -115,10 +84,11 @@ export async function PUT(request, { params }) {
   }
 }
 
-// Delete a team
+// Delete team
 export async function DELETE(request, { params }) {
   try {
     const { teamId } = params;
+    
     // Check authorization
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'admin') {
@@ -127,24 +97,10 @@ export async function DELETE(request, { params }) {
 
     await connectDB();
     
+    // Find the team
     const team = await Team.findById(teamId);
     if (!team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
-    }
-
-    // Remove team from leader
-    if (team.leader) {
-      await Leader.findByIdAndUpdate(team.leader, {
-        $pull: { teams: teamId }
-      });
-    }
-
-    // Remove team from all members
-    if (team.members.length > 0) {
-      await Member.updateMany(
-        { _id: { $in: team.members } },
-        { $unset: { team: "" } }
-      );
     }
 
     // Delete the team
@@ -152,7 +108,7 @@ export async function DELETE(request, { params }) {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Team deleted successfully' 
+      message: 'Team deleted successfully'
     });
   } catch (error) {
     console.error('Delete team error:', error);

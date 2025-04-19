@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
+import { useSession } from 'next-auth/react';
 
 const UsersList = () => {
+  const { data: session, status } = useSession();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,11 +17,20 @@ const UsersList = () => {
   const [selectedRole, setSelectedRole] = useState('');
   const [teams, setTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState('');
+  const [apiError, setApiError] = useState('');
 
+  // Load data even if session is not yet available - for debugging
   useEffect(() => {
+    console.log("UsersList component mounted");
     fetchUsers();
     fetchTeams();
   }, []);
+
+  // Show debugging information
+  useEffect(() => {
+    console.log("Session status:", status);
+    console.log("Session data:", session);
+  }, [session, status]);
 
   useEffect(() => {
     // Filter and search users
@@ -44,16 +55,20 @@ const UsersList = () => {
 
   const fetchUsers = async () => {
     try {
+      console.log("Fetching users...");
       setLoading(true);
       const { data } = await axios.get('/api/admin/users');
+      console.log("Users data received:", data);
       
       if (data.users) {
         setUsers(data.users);
         setFilteredUsers(data.users);
+        setApiError('');
       }
     } catch (err) {
+      console.error("Failed to fetch users:", err);
+      setApiError(`Failed to fetch users: ${err.message}`);
       setError('Failed to fetch users. Please try again.');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -61,7 +76,10 @@ const UsersList = () => {
 
   const fetchTeams = async () => {
     try {
+      console.log("Fetching teams...");
       const { data } = await axios.get('/api/admin/teams');
+      console.log("Teams data received:", data);
+      
       if (data.teams) {
         setTeams(data.teams);
       }
@@ -106,9 +124,21 @@ const UsersList = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-6">Loading users...</div>;
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="text-center py-6">Loading users...</div>
+        {apiError && (
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mt-4">
+            <p className="font-bold">Debug Info:</p>
+            <p>{apiError}</p>
+            <p>Session Status: {status}</p>
+          </div>
+        )}
+      </div>
+    );
   }
 
+  // Even if session is not authenticated, still show the content for debugging
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-center mb-6">
@@ -122,6 +152,21 @@ const UsersList = () => {
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
+        </div>
+      )}
+
+      {apiError && (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+          <p className="font-bold">Debug Info:</p>
+          <p>{apiError}</p>
+          <p>Session Status: {status}</p>
+        </div>
+      )}
+      
+      {status === 'unauthenticated' && (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+          <p className="font-bold">Warning:</p> 
+          <p>You are not authenticated. Sign in to access all features.</p>
         </div>
       )}
       

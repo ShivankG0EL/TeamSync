@@ -13,8 +13,12 @@ export async function PUT(request, { params }) {
     
     // Check authorization
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized - Not signed in' }, { status: 401 });
+    }
+    
+    if (session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 403 });
     }
 
     await connectDB();

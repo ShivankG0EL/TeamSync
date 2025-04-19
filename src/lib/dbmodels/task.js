@@ -21,5 +21,6 @@ const taskSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-const Task = mongoose.model('Task', taskSchema);
+// Check if model exists before creating
+const Task = mongoose.models.Task || mongoose.model('Task', taskSchema);
 export default Task;
