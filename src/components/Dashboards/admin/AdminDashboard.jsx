@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
+import Link from 'next/link';
 import Navbar from '../../Navbar/Navbar';
 
 const AdminDashboard = () => {
@@ -47,16 +48,45 @@ const AdminDashboard = () => {
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4">Team Management</h2>
+            <ul className="space-y-2">
+              <li className="hover:bg-gray-50 p-2 rounded">
+                <Link href="/admin/teams" className="block">View All Teams</Link>
+              </li>
+              <li className="hover:bg-gray-50 p-2 rounded">
+                <Link href="/admin/teams/create" className="block">Create New Team</Link>
+              </li>
+              <li className="hover:bg-gray-50 p-2 rounded">
+                <Link href="/admin/users" className="block">Manage Team Members</Link>
+              </li>
+              <li className="hover:bg-gray-50 p-2 rounded">
+                <Link href="/admin/users?filter=leader" className="block">Manage Team Leaders</Link>
+              </li>
+            </ul>
+            <Link href="/admin/teams" className="mt-4 block w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-center">
+              Team Dashboard
+            </Link>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4">User Management</h2>
             <ul className="space-y-2">
-              <li className="hover:bg-gray-50 p-2 rounded">Add New Users</li>
-              <li className="hover:bg-gray-50 p-2 rounded">Review Access Requests</li>
-              <li className="hover:bg-gray-50 p-2 rounded">Manage Permissions</li>
-              <li className="hover:bg-gray-50 p-2 rounded">Role Assignment</li>
+              <li className="hover:bg-gray-50 p-2 rounded">
+                <Link href="/admin/users" className="block">View All Users</Link>
+              </li>
+              <li className="hover:bg-gray-50 p-2 rounded">
+                <Link href="/admin/users/create" className="block">Add New User</Link>
+              </li>
+              <li className="hover:bg-gray-50 p-2 rounded">
+                <Link href="/admin/users/roles" className="block">Role Assignment</Link>
+              </li>
+              <li className="hover:bg-gray-50 p-2 rounded">
+                <Link href="/admin/users/permissions" className="block">Manage Permissions</Link>
+              </li>
             </ul>
-            <button className="mt-4 w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded">
-              Manage Users
-            </button>
+            <Link href="/admin/users" className="mt-4 block w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-center">
+              User Dashboard
+            </Link>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-md">

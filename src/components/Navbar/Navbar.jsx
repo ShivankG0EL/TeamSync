@@ -42,25 +42,42 @@ const Navbar = () => {
             </Link>
             <Link 
               href={`/${user?.role || 'member'}/projects`}
-              className="py-2 text-gray-700 hover:text-blue-600">
+              className={`py-2 text-gray-700 hover:text-blue-600 ${
+                pathname.includes('/projects') ? 'font-semibold border-b-2 border-blue-500' : ''
+              }`}>
               Projects
             </Link>
             <Link 
               href={`/${user?.role || 'member'}/tasks`}
-              className="py-2 text-gray-700 hover:text-blue-600">
+              className={`py-2 text-gray-700 hover:text-blue-600 ${
+                pathname.includes('/tasks') ? 'font-semibold border-b-2 border-blue-500' : ''
+              }`}>
               Tasks
             </Link>
             {user?.role === 'admin' && (
-              <Link 
-                href="/admin/users"
-                className="py-2 text-gray-700 hover:text-blue-600">
-                Users
-              </Link>
+              <>
+                <Link 
+                  href="/admin/teams"
+                  className={`py-2 text-gray-700 hover:text-blue-600 ${
+                    pathname.includes('/teams') ? 'font-semibold border-b-2 border-blue-500' : ''
+                  }`}>
+                  Teams
+                </Link>
+                <Link 
+                  href="/admin/users"
+                  className={`py-2 text-gray-700 hover:text-blue-600 ${
+                    pathname.includes('/users') ? 'font-semibold border-b-2 border-blue-500' : ''
+                  }`}>
+                  Users
+                </Link>
+              </>
             )}
             {user?.role === 'leader' && (
               <Link 
                 href="/leader/team"
-                className="py-2 text-gray-700 hover:text-blue-600">
+                className={`py-2 text-gray-700 hover:text-blue-600 ${
+                  pathname.includes('/team') ? 'font-semibold border-b-2 border-blue-500' : ''
+                }`}>
                 Team
               </Link>
             )}
@@ -157,13 +174,22 @@ const Navbar = () => {
                 Tasks
               </Link>
               {user?.role === 'admin' && (
-                <Link
-                  href="/admin/users"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Users
-                </Link>
+                <>
+                  <Link
+                    href="/admin/teams"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Teams
+                  </Link>
+                  <Link
+                    href="/admin/users"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Users
+                  </Link>
+                </>
               )}
               {user?.role === 'leader' && (
                 <Link
