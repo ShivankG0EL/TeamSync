@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import connectDB from "@/lib/dbConfig";
 import Team from '@/lib/dbmodels/teams';
+import Leader from '@/lib/dbmodels/leader';
+import Member from '@/lib/dbmodels/member'; // We need to import the Member model
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
+import bcrypt from 'bcrypt'; // For hashing password if needed
 
 export async function GET(request) {
   try {
@@ -60,7 +63,7 @@ export async function POST(request) {
 
     await connectDB();
     const data = await request.json();
-    const { name, description, leaderId, memberIds } = data;
+    const { name, description, memberId } = data;
 
     if (!name) {
       return NextResponse.json({ 
@@ -68,19 +71,59 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Create the team
+    if (!memberId) {
+      return NextResponse.json({ 
+        error: 'Team leader selection is required' 
+      }, { status: 400 });
+    }
+
+    // Find the member who will become a leader
+    const member = await Member.findById(memberId);
+    if (!member) {
+      return NextResponse.json({ 
+        error: 'Selected member not found' 
+      }, { status: 404 });
+    }
+
+    // Check if this member already exists as a leader
+    let leader = await Leader.findOne({ email: member.email });
+    
+    // If not, create a new leader entry from the member data
+    if (!leader) {
+      leader = await Leader.create({
+        name: member.name,
+        email: member.email,
+        position: member.position || 'Team Leader',
+        company: member.company,
+        password: member.password, // Copy password if exists
+        phone: member.phone,
+        isActive: true,
+        isVerified: member.isVerified || true,
+        status: 'active',
+        joinedAt: new Date()
+      });
+    }
+
+    // Create the team with the new leader
     const team = await Team.create({
       name,
       description,
-      leader: leaderId || null,
-      members: memberIds || [],
+      leader: leader._id,
+      members: [memberId], // Include the original member in the team
       createdAt: new Date(),
       updatedAt: new Date()
     });
 
+    // Update the leader's teams array
+    await Leader.findByIdAndUpdate(
+      leader._id, 
+      { $push: { teams: team._id } }
+    );
+
     return NextResponse.json({ 
       success: true, 
-      team
+      team,
+      message: 'Team created successfully and member promoted to leader'
     });
   } catch (error) {
     console.error('Create team error:', error);

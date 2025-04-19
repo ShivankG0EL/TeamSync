@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 
-const TeamsList = () => {
+const TeamsList = ({ searchTerm = '' }) => {
   const router = useRouter();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,44 +53,86 @@ const TeamsList = () => {
     }
   };
 
+  // Filter teams based on search term
+  const filteredTeams = teams.filter(team => 
+    team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (team.description && team.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (team.leader && team.leader.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // Animation variants
+  const listVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
   if (loading) {
-    return <div className="text-center py-6">Loading teams...</div>;
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#8b5cf6]"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Teams</h2>
-        <Link href="/admin/teams/create" 
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-          Create New Team
-        </Link>
-      </div>
-      
+    <motion.div 
+      variants={listVariants}
+      initial="hidden"
+      animate="visible"
+      className="bg-white rounded-lg shadow-md p-6"
+    >      
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
       
-      {teams.length === 0 ? (
-        <div className="text-center py-4 text-gray-500">
-          No teams found. Create your first team!
+      {filteredTeams.length === 0 ? (
+        <div className="text-center py-8">
+          {searchTerm ? (
+            <p className="text-gray-500">No teams match your search. Try a different keyword.</p>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-gray-500">No teams found.</p>
+              <Link href="/admin/teams/create" 
+                    className="inline-block bg-[#8b5cf6] hover:bg-[#7c3aed] text-white font-bold py-2 px-6 rounded">
+                Create your first team
+              </Link>
+            </div>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white">
             <thead>
-              <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+              <tr className="bg-[#f3f0e9] text-[#4b5563] uppercase text-sm leading-normal">
                 <th className="py-3 px-6 text-left">Team Name</th>
                 <th className="py-3 px-6 text-left">Leader</th>
                 <th className="py-3 px-6 text-left">Members</th>
                 <th className="py-3 px-6 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="text-gray-600 text-sm">
-              {teams.map(team => (
-                <tr key={team._id} className="border-b border-gray-200 hover:bg-gray-50">
+            <tbody className="text-[#4b5563] text-sm">
+              {filteredTeams.map(team => (
+                <motion.tr 
+                  key={team._id} 
+                  variants={itemVariants}
+                  className="border-b border-[#e8e0d8] hover:bg-[#faf6f0]"
+                >
                   <td className="py-3 px-6 text-left">
                     <div className="font-medium">{team.name}</div>
                     <div className="text-xs text-gray-500">{team.description}</div>
@@ -109,13 +152,13 @@ const TeamsList = () => {
                   </td>
                   <td className="py-3 px-6 text-center">
                     <div className="flex item-center justify-center">
-                      <Link href={`/admin/teams/${team._id}`} className="w-6 mr-2 transform hover:text-blue-500 hover:scale-110 cursor-pointer">
+                      <Link href={`/admin/teams/${team._id}`} className="w-6 mr-2 transform hover:text-[#8b5cf6] hover:scale-110 cursor-pointer">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                       </Link>
-                      <Link href={`/admin/teams/edit/${team._id}`} className="w-6 mr-2 transform hover:text-yellow-500 hover:scale-110 cursor-pointer">
+                      <Link href={`/admin/teams/edit/${team._id}`} className="w-6 mr-2 transform hover:text-[#8b5cf6] hover:scale-110 cursor-pointer">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                         </svg>
@@ -128,7 +171,7 @@ const TeamsList = () => {
                       </div>
                     </div>
                   </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>
@@ -137,28 +180,42 @@ const TeamsList = () => {
       
       {/* Delete Confirmation Modal */}
       {deleteConfirmation && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50"
+        >
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full"
+          >
             <h3 className="text-lg font-bold mb-4">Confirm Delete</h3>
             <p>Are you sure you want to delete this team? This action cannot be undone.</p>
             <div className="flex justify-end space-x-4 mt-6">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setDeleteConfirmation(null)}
                 className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
               >
                 Cancel
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => confirmDelete(deleteConfirmation)}
                 className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
               >
                 Delete
-              </button>
+              </motion.button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

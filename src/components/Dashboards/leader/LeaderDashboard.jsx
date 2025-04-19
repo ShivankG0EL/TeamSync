@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
-import Navbar from '../../Navbar/Navbar';
 
 const LeaderDashboard = () => {
   const router = useRouter();
@@ -20,7 +19,6 @@ const LeaderDashboard = () => {
 
   return (
     <>
-      <Navbar />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-6">Team Leader Dashboard</h1>
         

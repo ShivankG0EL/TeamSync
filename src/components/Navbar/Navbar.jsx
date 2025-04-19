@@ -4,6 +4,19 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useSelector } from 'react-redux';
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { 
+  FaTachometerAlt, 
+  FaProjectDiagram, 
+  FaTasks, 
+  FaUsers, 
+  FaUserCog, 
+  FaUserCircle, 
+  FaCog, 
+  FaSignOutAlt, 
+  FaBars, 
+  FaTimes
+} from 'react-icons/fa';
 import Signout from '../Auth/SignOut/Signout';
 
 const Navbar = () => {
@@ -20,66 +33,111 @@ const Navbar = () => {
     setIsProfileOpen(!isProfileOpen);
   };
 
+  // Animation variants
+  const navItemVariants = {
+    hover: { scale: 1.05, transition: { duration: 0.2 } }
+  };
+
+  const dropdownVariants = {
+    hidden: { opacity: 0, y: -10 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.2 } }
+  };
+
+  const mobileMenuVariants = {
+    hidden: { height: 0, opacity: 0 },
+    visible: { height: 'auto', opacity: 1, transition: { duration: 0.3 } }
+  };
+
   return (
-    <nav className="bg-white shadow-md border-b border-gray-200 py-4">
+    <nav className="bg-[#faf6f0] shadow-md border-b border-[#e8e0d8] py-4">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center">
           {/* Logo and brand section */}
-          <div className="flex items-center">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="flex items-center"
+          >
             <Link href={`/${user?.role || 'member'}/dashboard`} className="flex items-center">
-              <span className="text-2xl font-bold text-blue-600">TeamSync</span>
+              <span className="text-2xl font-bold text-[#8b5cf6]">TeamSync</span>
             </Link>
-          </div>
+          </motion.div>
 
           {/* Desktop navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link 
-              href={`/${user?.role || 'member'}/dashboard`}
-              className={`py-2 text-gray-700 hover:text-blue-600 ${
-                pathname.includes('/dashboard') ? 'font-semibold border-b-2 border-blue-500' : ''
-              }`}>
-              Dashboard
-            </Link>
-            <Link 
-              href={`/${user?.role || 'member'}/projects`}
-              className={`py-2 text-gray-700 hover:text-blue-600 ${
-                pathname.includes('/projects') ? 'font-semibold border-b-2 border-blue-500' : ''
-              }`}>
-              Projects
-            </Link>
-            <Link 
-              href={`/${user?.role || 'member'}/tasks`}
-              className={`py-2 text-gray-700 hover:text-blue-600 ${
-                pathname.includes('/tasks') ? 'font-semibold border-b-2 border-blue-500' : ''
-              }`}>
-              Tasks
-            </Link>
+            <motion.div variants={navItemVariants} whileHover="hover">
+              <Link 
+                href={`/${user?.role || 'member'}/dashboard`}
+                className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
+                  pathname.includes('/dashboard') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
+                }`}
+              >
+                <FaTachometerAlt className="mr-2" /> Dashboard
+              </Link>
+            </motion.div>
+            
             {user?.role === 'admin' && (
               <>
-                <Link 
-                  href="/admin/teams"
-                  className={`py-2 text-gray-700 hover:text-blue-600 ${
-                    pathname.includes('/teams') ? 'font-semibold border-b-2 border-blue-500' : ''
-                  }`}>
-                  Teams
-                </Link>
-                <Link 
-                  href="/admin/users"
-                  className={`py-2 text-gray-700 hover:text-blue-600 ${
-                    pathname.includes('/users') ? 'font-semibold border-b-2 border-blue-500' : ''
-                  }`}>
-                  Users
-                </Link>
+                <motion.div variants={navItemVariants} whileHover="hover">
+                  <Link 
+                    href={`/${user?.role}/projects`}
+                    className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
+                      pathname.includes('/projects') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
+                    }`}
+                  >
+                    <FaProjectDiagram className="mr-2" /> Projects
+                  </Link>
+                </motion.div>
+                <motion.div variants={navItemVariants} whileHover="hover">
+                  <Link 
+                    href="/admin/teams"
+                    className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
+                      pathname.includes('/teams') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
+                    }`}
+                  >
+                    <FaUsers className="mr-2" /> Teams
+                  </Link>
+                </motion.div>
               </>
             )}
+            
+            {user?.role === 'member' && (
+              <>
+                <motion.div variants={navItemVariants} whileHover="hover">
+                  <Link 
+                    href="/member/teams"
+                    className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
+                      pathname.includes('/teams') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
+                    }`}
+                  >
+                    <FaUsers className="mr-2" /> Teams
+                  </Link>
+                </motion.div>
+                <motion.div variants={navItemVariants} whileHover="hover">
+                  <Link 
+                    href="/member/tasks"
+                    className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
+                      pathname.includes('/tasks') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
+                    }`}
+                  >
+                    <FaTasks className="mr-2" /> Tasks
+                  </Link>
+                </motion.div>
+              </>
+            )}
+            
             {user?.role === 'leader' && (
-              <Link 
-                href="/leader/team"
-                className={`py-2 text-gray-700 hover:text-blue-600 ${
-                  pathname.includes('/team') ? 'font-semibold border-b-2 border-blue-500' : ''
-                }`}>
-                Team
-              </Link>
+              <motion.div variants={navItemVariants} whileHover="hover">
+                <Link 
+                  href="/leader/team"
+                  className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
+                    pathname.includes('/team') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
+                  }`}
+                >
+                  <FaUsers className="mr-2" /> Team
+                </Link>
+              </motion.div>
             )}
           </div>
 
@@ -87,124 +145,141 @@ const Navbar = () => {
           <div className="flex items-center">
             {/* User profile dropdown */}
             <div className="relative ml-3">
-              <button
-                className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]"
                 onClick={toggleProfile}
               >
-                <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                <div className="h-10 w-10 rounded-full bg-[#8b5cf6] flex items-center justify-center text-white font-bold">
                   {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </div>
-              </button>
+              </motion.button>
 
               {/* Profile dropdown */}
               {isProfileOpen && (
-                <div className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5">
-                  <div className="px-4 py-2 text-sm text-gray-700 border-b">
+                <motion.div 
+                  variants={dropdownVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-[#faf6f0] py-1 shadow-lg ring-1 ring-black ring-opacity-5 border border-[#e8e0d8]"
+                >
+                  <div className="px-4 py-2 text-sm text-[#4b5563] border-b border-[#e8e0d8]">
                     <p className="font-semibold">{user?.name || 'User'}</p>
-                    <p className="text-gray-500">{user?.email || 'user@example.com'}</p>
-                    <p className="capitalize text-xs mt-1 text-blue-600">{user?.role || 'member'}</p>
+                    <p className="text-[#6b7280]">{user?.email || 'user@example.com'}</p>
+                    <p className="capitalize text-xs mt-1 text-[#8b5cf6]">{user?.role || 'member'}</p>
                   </div>
                   <Link
                     href="/profile"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="block px-4 py-2 text-sm text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
                     onClick={() => setIsProfileOpen(false)}
                   >
-                    Your Profile
+                    <FaUserCircle className="mr-2 text-[#8b5cf6]" /> Your Profile
                   </Link>
                   <Link
                     href="/settings"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="block px-4 py-2 text-sm text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
                     onClick={() => setIsProfileOpen(false)}
                   >
-                    Settings
+                    <FaCog className="mr-2 text-[#8b5cf6]" /> Settings
                   </Link>
-                  <div className="block px-4 py-2 hover:bg-gray-100" onClick={() => setIsProfileOpen(false)}>
-                    <Signout className="text-sm text-red-600 hover:text-red-800 w-full text-left" />
+                  <div className="block px-4 py-2 hover:bg-[#f0e9e0] flex items-center" onClick={() => setIsProfileOpen(false)}>
+                    <FaSignOutAlt className="mr-2 text-[#ef4444]" />
+                    <Signout className="text-sm text-[#ef4444] hover:text-[#b91c1c] w-full text-left" />
                   </div>
-                </div>
+                </motion.div>
               )}
             </div>
 
             {/* Mobile menu button */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
-              className="inline-flex items-center justify-center p-2 ml-4 rounded-md text-gray-700 md:hidden focus:outline-none"
+              className="inline-flex items-center justify-center p-2 ml-4 rounded-md text-[#4b5563] md:hidden focus:outline-none"
               onClick={toggleMenu}
             >
-              <svg
-                className="h-6 w-6"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                {isMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
+              {isMenuOpen ? (
+                <FaTimes className="h-6 w-6" />
+              ) : (
+                <FaBars className="h-6 w-6" />
+              )}
+            </motion.button>
           </div>
         </div>
 
         {/* Mobile menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-white border-t mt-2">
+          <motion.div 
+            variants={mobileMenuVariants}
+            initial="hidden"
+            animate="visible"
+            className="md:hidden bg-[#faf6f0] border-t mt-2 border-[#e8e0d8]"
+          >
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
               <Link
                 href={`/${user?.role || 'member'}/dashboard`}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Dashboard
+                <FaTachometerAlt className="mr-2 text-[#8b5cf6]" /> Dashboard
               </Link>
-              <Link
-                href={`/${user?.role || 'member'}/projects`}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Projects
-              </Link>
-              <Link
-                href={`/${user?.role || 'member'}/tasks`}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Tasks
-              </Link>
+              
               {user?.role === 'admin' && (
                 <>
                   <Link
-                    href="/admin/teams"
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                    href={`/${user?.role}/projects`}
+                    className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Teams
+                    <FaProjectDiagram className="mr-2 text-[#8b5cf6]" /> Projects
                   </Link>
                   <Link
-                    href="/admin/users"
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                    href="/admin/teams"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Users
+                    <FaUsers className="mr-2 text-[#8b5cf6]" /> Teams
                   </Link>
                 </>
               )}
+              
+              {user?.role === 'member' && (
+                <>
+                  <Link
+                    href="/member/teams"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <FaUsers className="mr-2 text-[#8b5cf6]" /> Teams
+                  </Link>
+                  <Link
+                    href="/member/tasks"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <FaTasks className="mr-2 text-[#8b5cf6]" /> Tasks
+                  </Link>
+                </>
+              )}
+              
               {user?.role === 'leader' && (
                 <Link
                   href="/leader/team"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Team
+                  <FaUsers className="mr-2 text-[#8b5cf6]" /> Team
                 </Link>
               )}
             </div>
-            <div className="px-3 py-2 border-t mt-2">
-              <Signout className="block w-full text-left text-base font-medium text-red-600 hover:text-red-800" />
+            <div className="px-3 py-2 border-t mt-2 border-[#e8e0d8]">
+              <div className="flex items-center">
+                <FaSignOutAlt className="mr-2 text-[#ef4444]" />
+                <Signout className="block w-full text-left text-base font-medium text-[#ef4444] hover:text-[#b91c1c]" />
+              </div>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
     </nav>
