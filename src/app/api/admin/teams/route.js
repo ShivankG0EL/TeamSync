@@ -104,21 +104,23 @@ export async function POST(request) {
       });
     }
 
-    // Create the team with the new leader
+    // Create the team with the leader's email
     const team = await Team.create({
       name,
       description,
-      leader: leader._id,
+      leader: member.email, // Store email instead of ID
       members: [memberId], // Include the original member in the team
       createdAt: new Date(),
       updatedAt: new Date()
     });
 
-    // Update the leader's teams array
-    await Leader.findByIdAndUpdate(
-      leader._id, 
-      { $push: { teams: team._id } }
-    );
+    // Update the leader's teams array if needed
+    if (leader._id) {
+      await Leader.findByIdAndUpdate(
+        leader._id, 
+        { $push: { teams: team._id } }
+      );
+    }
 
     return NextResponse.json({ 
       success: true, 

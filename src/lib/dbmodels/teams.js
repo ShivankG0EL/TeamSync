@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const teamSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
-  leader: { type: mongoose.Schema.Types.ObjectId, ref: 'Leader' },
+  leader: { type: String }, // Store leader's email instead of ObjectId reference
   members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }],
   company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },
   createdAt: { type: Date, default: Date.now },

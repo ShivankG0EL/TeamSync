@@ -9,24 +9,35 @@ import { motion } from 'framer-motion';
 const TeamsList = ({ searchTerm = '' }) => {
   const router = useRouter();
   const [teams, setTeams] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
 
   useEffect(() => {
-    fetchTeams();
+    fetchData();
   }, []);
 
-  const fetchTeams = async () => {
+  // Fetch both teams and users data
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get('/api/admin/teams');
       
-      if (data.teams) {
-        setTeams(data.teams);
+      // Fetch teams and users in parallel
+      const [teamsResponse, usersResponse] = await Promise.all([
+        axios.get('/api/admin/teams'),
+        axios.get('/api/admin/users')
+      ]);
+      
+      if (teamsResponse.data.teams) {
+        setTeams(teamsResponse.data.teams);
+      }
+      
+      if (usersResponse.data.users) {
+        setUsers(usersResponse.data.users);
       }
     } catch (err) {
-      setError('Failed to fetch teams. Please try again.');
+      setError('Failed to fetch data. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -53,12 +64,21 @@ const TeamsList = ({ searchTerm = '' }) => {
     }
   };
 
+  // Helper function to find user by email
+  const findUserByEmail = (email) => {
+    return users.find(user => user.email === email);
+  };
+
   // Filter teams based on search term
-  const filteredTeams = teams.filter(team => 
-    team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (team.description && team.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (team.leader && team.leader.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredTeams = teams.filter(team => {
+    // Find leader user from the email
+    const leaderUser = team.leader ? findUserByEmail(team.leader) : null;
+    
+    return team.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (team.description && team.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (leaderUser && leaderUser.name && leaderUser.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (team.leader && team.leader.toLowerCase().includes(searchTerm.toLowerCase()));
+  });
 
   // Animation variants
   const listVariants = {
@@ -127,52 +147,51 @@ const TeamsList = ({ searchTerm = '' }) => {
               </tr>
             </thead>
             <tbody className="text-[#4b5563] text-sm">
-              {filteredTeams.map(team => (
-                <motion.tr 
-                  key={team._id} 
-                  variants={itemVariants}
-                  className="border-b border-[#e8e0d8] hover:bg-[#faf6f0]"
-                >
-                  <td className="py-3 px-6 text-left">
-                    <div className="font-medium">{team.name}</div>
-                    <div className="text-xs text-gray-500">{team.description}</div>
-                  </td>
-                  <td className="py-3 px-6 text-left">
-                    {team.leader ? (
-                      <div>
-                        <div>{team.leader.name}</div>
-                        <div className="text-xs text-gray-500">{team.leader.email}</div>
+              {filteredTeams.map(team => {
+                // Find the leader user from the email
+                const leaderUser = team.leader ? findUserByEmail(team.leader) : null;
+                
+                return (
+                  <motion.tr 
+                    key={team._id} 
+                    variants={itemVariants}
+                    className="border-b border-[#e8e0d8] hover:bg-[#faf6f0]"
+                  >
+                    <td className="py-3 px-6 text-left">
+                      <div className="font-medium">{team.name}</div>
+                      <div className="text-xs text-gray-500">{team.description}</div>
+                    </td>
+                    <td className="py-3 px-6 text-left">
+                      {team.leader ? (
+                        <div>
+                          <div>{leaderUser ? leaderUser.name : 'Loading...'}</div>
+                          <div className="text-xs text-gray-500">{team.leader}</div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">No leader assigned</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-6 text-left">
+                      <div>{team.members?.length || 0} members</div>
+                    </td>
+                    <td className="py-3 px-6 text-center">
+                      <div className="flex item-center justify-center">
+                        <Link href={`/admin/teams/edit/${team._id}`} className="w-6 mr-2 transform hover:text-[#8b5cf6] hover:scale-110 cursor-pointer">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </Link>
+                        <div className="w-6 mr-2 transform hover:text-red-500 hover:scale-110 cursor-pointer"
+                             onClick={() => handleDeleteClick(team._id)}>
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </div>
                       </div>
-                    ) : (
-                      <span className="text-gray-400">No leader assigned</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-6 text-left">
-                    <div>{team.members?.length || 0} members</div>
-                  </td>
-                  <td className="py-3 px-6 text-center">
-                    <div className="flex item-center justify-center">
-                      {/* <Link href={`/admin/teams/${team._id}`} className="w-6 mr-2 transform hover:text-[#8b5cf6] hover:scale-110 cursor-pointer">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </Link> */}
-                      <Link href={`/admin/teams/edit/${team._id}`} className="w-6 mr-2 transform hover:text-[#8b5cf6] hover:scale-110 cursor-pointer">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </Link>
-                      <div className="w-6 mr-2 transform hover:text-red-500 hover:scale-110 cursor-pointer"
-                           onClick={() => handleDeleteClick(team._id)}>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </div>
-                    </div>
-                  </td>
-                </motion.tr>
-              ))}
+                    </td>
+                  </motion.tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

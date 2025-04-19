@@ -70,8 +70,12 @@ const EditTeam = ({ teamId }) => {
         const users = usersResponse.data.users || [];
         
         // Filter users by role
-        const leadersList = users.filter(user => user.userType === 'leader');
-        const membersList = users.filter(user => user.userType === 'member');
+        const leadersList = users.filter(user => 
+          user.roles && user.roles.some(role => role.type === 'leader')
+        );
+        const membersList = users.filter(user => 
+          user.roles && user.roles.some(role => role.type === 'member')
+        );
         
         setLeaders(leadersList);
         setMembers(membersList);
@@ -79,11 +83,23 @@ const EditTeam = ({ teamId }) => {
         // Current team member IDs
         const currentMemberIds = team.members?.map(member => member._id) || [];
         
-        // Set team data - handle cases where leader or members might be null
+        // Find the current leader's ID based on email
+        let currentLeaderId = '';
+        if (team.leader) {
+          const leaderMember = membersList.find(member => 
+            member.email === team.leader || 
+            (team.leader._id && member._id === team.leader._id)
+          );
+          if (leaderMember) {
+            currentLeaderId = leaderMember._id;
+          }
+        }
+        
+        // Set team data
         setTeamData({
           name: team.name || '',
           description: team.description || '',
-          leaderId: team.leader?._id || '', // Handle possible null leader
+          leaderId: currentLeaderId,
           memberIds: currentMemberIds
         });
         
@@ -131,14 +147,8 @@ const EditTeam = ({ teamId }) => {
   const handleRemoveMember = (memberId) => {
     console.log("Removing member:", memberId);
     
-    // Find the member to be removed
-    const memberToRemove = members.find(m => m._id === memberId);
-    
-    // Find the leader
-    const leader = leaders.find(l => l._id === teamData.leaderId);
-    
-    // Check if this member is the team leader by comparing emails
-    if (leader && memberToRemove && memberToRemove.email === leader.email) {
+    // Check if this member is the team leader
+    if (memberId === teamData.leaderId) {
       setError("Cannot remove a member who is also the team leader.");
       setTimeout(() => setError(''), 3000);
       return;
@@ -150,7 +160,8 @@ const EditTeam = ({ teamId }) => {
       memberIds: prev.memberIds.filter(id => id !== memberId)
     }));
     
-    // Add back to available members if the member exists
+    // Add back to available members
+    const memberToRemove = members.find(m => m._id === memberId);
     if (memberToRemove) {
       setAvailableMembers(prev => [...prev, memberToRemove]);
     }
@@ -308,6 +319,8 @@ const EditTeam = ({ teamId }) => {
               {leaders.map(leader => (
                 <option key={leader._id} value={leader._id}>
                   {leader.name} ({leader.email})
+                  {leader.roles.some(role => role.type === 'leader') && 
+                    leader._id !== originalTeam?.leader?._id && " - Already a leader"}
                 </option>
               ))}
             </select>
@@ -333,6 +346,9 @@ const EditTeam = ({ teamId }) => {
                 ) : (
                   teamData.memberIds.map((memberId) => {
                     const isLeader = memberId === teamData.leaderId;
+                    const member = members.find(m => m._id === memberId);
+                    const hasLeaderRole = member?.roles?.some(role => role.type === 'leader');
+                    
                     return (
                       <motion.div
                         key={memberId}
@@ -349,6 +365,11 @@ const EditTeam = ({ teamId }) => {
                         <span className="text-gray-800">{getMemberNameById(memberId)}</span>
                         {isLeader && (
                           <span className="ml-1 text-xs bg-purple-700 text-white px-1.5 py-0.5 rounded-full">
+                            Team Leader
+                          </span>
+                        )}
+                        {!isLeader && hasLeaderRole && (
+                          <span className="ml-1 text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded-full">
                             Leader
                           </span>
                         )}
@@ -390,6 +411,7 @@ const EditTeam = ({ teamId }) => {
                   {availableMembers.map(member => (
                     <option key={member._id} value={member._id}>
                       {member.name} ({member.email})
+                      {member.roles.some(role => role.type === 'leader') && " - Already a leader"}
                     </option>
                   ))}
                 </select>

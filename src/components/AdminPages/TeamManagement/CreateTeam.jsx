@@ -52,7 +52,10 @@ const CreateTeam = () => {
         const { data } = await axios.get('/api/admin/users');
         
         if (data.users) {
-          setMembers(data.users.filter(user => user.userType === 'member'));
+          // Filter users who have a member role
+          setMembers(data.users.filter(user => 
+            user.roles && user.roles.some(role => role.type === 'member')
+          ));
         }
       } catch (err) {
         setError('Failed to fetch users. Please try again.');
@@ -75,6 +78,7 @@ const CreateTeam = () => {
     setSuccess(false);
 
     try {
+      // The API will use the member ID to look up their email and store that as the team leader
       const response = await axios.post('/api/admin/teams', teamData);
       
       if (response.data.success) {
@@ -202,11 +206,15 @@ const CreateTeam = () => {
               {members.map(member => (
                 <option key={member._id} value={member._id}>
                   {member.name} ({member.email})
+                  {member.roles.some(role => role.type === 'leader') && " - Already a leader"}
                 </option>
               ))}
             </select>
             <p className="mt-1 text-sm text-gray-500">
               The selected member will be promoted to team leader.
+              {members.some(m => m._id === teamData.memberId && 
+                 m.roles.some(role => role.type === 'leader')) && 
+                " Note: This user is already a leader for another team."}
             </p>
           </motion.div>
           

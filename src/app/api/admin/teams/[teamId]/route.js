@@ -62,19 +62,19 @@ export async function PUT(request, { params }) {
 
     // Ensure the leader is also in the members array if leaderId is provided
     let finalMemberIds = memberIds || team.members;
+    let leaderEmail = team.leader; // Default to current leader email
     
     if (leaderId) {
-      // Get leader details to compare by email
-      const leader = await Leader.findById(leaderId);
+      // Find the member to get their email
+      const leaderMember = await Member.findById(leaderId);
       
-      if (leader) {
-        // Find if any existing member has the same email as the leader
-        const isLeaderInMembers = await Member.findOne({ email: leader.email });
+      if (leaderMember) {
+        // Store the email of the leader
+        leaderEmail = leaderMember.email;
         
-        // If we found a member with the same email as the leader
-        if (isLeaderInMembers && !finalMemberIds.includes(isLeaderInMembers._id.toString())) {
-          // Add the member with matching email to members array
-          finalMemberIds = [...finalMemberIds, isLeaderInMembers._id];
+        // Make sure this member is included in the team members
+        if (!finalMemberIds.includes(leaderId)) {
+          finalMemberIds = [...finalMemberIds, leaderId];
         }
       }
     }
@@ -85,17 +85,23 @@ export async function PUT(request, { params }) {
       {
         name: name || team.name,
         description: description !== undefined ? description : team.description,
-        leader: leaderId !== undefined ? (leaderId || null) : team.leader,
+        leader: leaderEmail, // Store leader's email instead of ID
         members: finalMemberIds,
         updatedAt: new Date()
       },
       { new: true }
-    ).populate('leader', 'name email')
-     .populate('members', 'name email');
+    );
+
+    // Get leader and member details for the response
+    const populatedTeam = {
+      ...updatedTeam.toObject(),
+      leader: await Member.findOne({ email: updatedTeam.leader }).select('name email').lean(),
+      members: await Member.find({ _id: { $in: updatedTeam.members } }).select('name email').lean()
+    };
 
     return NextResponse.json({ 
       success: true, 
-      team: updatedTeam
+      team: populatedTeam
     });
   } catch (error) {
     console.error('Update team error:', error);
