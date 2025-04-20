@@ -157,3 +157,60 @@ export const sendWelcomeEmail = async ({ email, name }) => {
     return false;
   }
 };
+
+/**
+ * Send task assignment notification email
+ * @param {Object} options - Email options
+ * @param {string} options.email - Recipient email
+ * @param {string} options.name - Recipient name
+ * @param {Object} options.task - Task details
+ * @param {string} options.leaderName - Name of the team leader who assigned the task
+ */
+export const sendTaskAssignmentEmail = async ({ email, name, task, leaderName }) => {
+  try {
+    const dueDate = new Date(task.dueDate).toLocaleString([], {
+      dateStyle: 'full',
+      timeStyle: 'short'
+    });
+    
+    const priorityColor = {
+      high: '#ef4444',
+      medium: '#f59e0b',
+      low: '#22c55e'
+    };
+    
+    const mailOptions = {
+      from: `"TeamSync" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: `New Task Assigned: ${task.title}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+          <h2 style="color: #333;">New Task Assignment</h2>
+          <p>Hello, ${name}!</p>
+          <p>${leaderName} has assigned you a new task in TeamSync.</p>
+          
+          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #3b82f6;">${task.title}</h3>
+            <p style="margin-bottom: 5px;"><strong>Description:</strong> ${task.description || 'No description provided'}</p>
+            <p style="margin-bottom: 5px;"><strong>Due Date:</strong> ${dueDate}</p>
+            <p style="margin-bottom: 5px;"><strong>Priority:</strong> <span style="color: ${priorityColor[task.priority] || '#333'};">${task.priority.toUpperCase()}</span></p>
+            <p style="margin-bottom: 0;"><strong>Status:</strong> ${task.status}</p>
+          </div>
+          
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/member/dashboard" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View Task Details</a>
+          </div>
+          
+          <p>Please log in to your TeamSync account to view full details and update the task status.</p>
+          <p>Best regards,<br>The TeamSync Team</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error('Email sending error:', error);
+    return false;
+  }
+};

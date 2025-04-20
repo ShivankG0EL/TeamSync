@@ -4,6 +4,7 @@ import Task from "../../../../lib/dbmodels/task";
 import Team from "../../../../lib/dbmodels/teams";
 import Member from "../../../../lib/dbmodels/member";
 import Leader from "../../../../lib/dbmodels/leader";
+import { sendTaskAssignmentEmail } from "../../../../lib/emailUtils";
 
 export async function POST(request) {
   try {
@@ -62,6 +63,23 @@ export async function POST(request) {
     const populatedTask = await Task.findById(newTask._id)
       .populate('assignedTo', 'name email role')
       .populate('team', 'name');
+    
+    // Send email notification to the member
+    if (member.email) {
+      await sendTaskAssignmentEmail({
+        email: member.email,
+        name: member.name,
+        task: {
+          ...newTask.toObject(),
+          title,
+          description,
+          priority,
+          status,
+          dueDate
+        },
+        leaderName: leader ? leader.name : 'Your team leader'
+      });
+    }
     
     return NextResponse.json({
       message: "Task created successfully",
