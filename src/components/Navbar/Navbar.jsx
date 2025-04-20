@@ -108,28 +108,16 @@ const Navbar = () => {
             )}
             
             {user?.role === 'member' && (
-              <>
-                <motion.div variants={navItemVariants} whileHover="hover">
-                  <Link 
-                    href="/member/teams"
-                    className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
-                      pathname.includes('/teams') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
-                    }`}
-                  >
-                    <FaUsers className="mr-2" /> Teams
-                  </Link>
-                </motion.div>
-                <motion.div variants={navItemVariants} whileHover="hover">
-                  <Link 
-                    href="/member/tasks"
-                    className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
-                      pathname.includes('/tasks') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
-                    }`}
-                  >
-                    <FaTasks className="mr-2" /> Tasks
-                  </Link>
-                </motion.div>
-              </>
+              <motion.div variants={navItemVariants} whileHover="hover">
+                <Link 
+                  href="/member/teams"
+                  className={`py-2 flex items-center text-[#4b5563] hover:text-[#8b5cf6] ${
+                    pathname.includes('/teams') ? 'font-semibold border-b-2 border-[#8b5cf6] text-[#8b5cf6]' : ''
+                  }`}
+                >
+                  <FaUsers className="mr-2" /> Teams
+                </Link>
+              </motion.div>
             )}
             
             {user?.role === 'leader' && (
@@ -250,22 +238,13 @@ const Navbar = () => {
               )}
               
               {user?.role === 'member' && (
-                <>
-                  <Link
-                    href="/member/teams"
-                    className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <FaUsers className="mr-2 text-[#8b5cf6]" /> Teams
-                  </Link>
-                  <Link
-                    href="/member/tasks"
-                    className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <FaTasks className="mr-2 text-[#8b5cf6]" /> Tasks
-                  </Link>
-                </>
+                <Link
+                  href="/member/teams"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-[#4b5563] hover:bg-[#f0e9e0] flex items-center"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <FaUsers className="mr-2 text-[#8b5cf6]" /> Teams
+                </Link>
               )}
               
               {user?.role === 'leader' && (

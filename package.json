@@ -13,6 +13,7 @@
     "axios": "^1.8.4",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
+    "formidable": "^3.5.3",
     "framer-motion": "^12.7.4",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.2",

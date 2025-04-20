@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectDB from "../../../../lib/dbConfig";
 import Member from "../../../../lib/dbmodels/member";
+import Team from "../../../../lib/dbmodels/teams";
 
 export async function GET(request) {
   try {
@@ -26,16 +27,14 @@ export async function GET(request) {
       );
     }
     
-    // Remove sensitive information before sending response
-    const memberData = member.toObject();
-    delete memberData.password;
-    delete memberData.authTokens;
-    delete memberData.verificationCode;
-    delete memberData.verificationExpires;
+    // Find teams that include this member
+    const teams = await Team.find({ 
+      members: member._id 
+    }).select('_id name description createdAt');
     
-    return NextResponse.json({ member: memberData });
+    return NextResponse.json({ teams });
   } catch (error) {
-    console.error("Error fetching member profile:", error);
+    console.error("Error fetching member teams:", error);
     return NextResponse.json(
       { error: error.message }, 
       { status: 500 }
